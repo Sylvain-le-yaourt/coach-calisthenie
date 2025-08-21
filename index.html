@@ -43,132 +43,419 @@
     <pre style="white-space:pre-wrap;margin:6px 0 0"></pre>
   </div>
 
-  <!-- Tailwind (optionnel) -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- React + ReactDOM (UMD, via jsDelivr) -->
+  <!-- React + ReactDOM (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 
   <!-- Babel pour transformer le JSX dans le navigateur -->
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
 
-  <!-- Ton app : même code que dans le canvas, mais embarqué ici -->
-  <!-- IMPORTANT: data-presets="react" pour éviter la page blanche -->
+  <!-- Ton app -->
   <script type="text/babel" data-presets="react">
     const { useEffect, useMemo, useRef, useState } = React;
 
-    // ===== utilitaires et app =====
-    // (code compacté : même logique que ta version "mobile" qu'on a générée)
-    // -- helpers --
-    const storage={get(k,f){try{const r=localStorage.getItem(k);return r?JSON.parse(r):f}catch{return f}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-    const MONTHS_FR=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-    const WDAYS_FR=["L","M","M","J","V","S","D"];
-    const cls=(...xs)=>xs.filter(Boolean).join(" ");
-    const fKey=(d)=>{const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,"0");const day=String(d.getDate()).padStart(2,"0");return y+"-"+m+"-"+day};
-    const sOfW=(date)=>{const d=new Date(date);const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);return d};
-    const addW=(date,delta)=>{const d=new Date(date);d.setDate(d.getDate()+delta*7);return d};
-    const wDays=(viewDate)=>{const start=sOfW(viewDate);return Array.from({length:7},(_,i)=>{const dt=new Date(start);dt.setDate(start.getDate()+i);return dt})};
-    const ytId=(url)=>{if(!url)return"";try{const u=new URL(url);const host=u.hostname.replace(/^www\./,"");const p=u.pathname.split("/").filter(Boolean);
-      if(host.includes("youtu.be"))return p[0]||""; if(host.includes("youtube.com")||host.includes("m.youtube.com")||host.includes("music.youtube.com")){
-      const v=u.searchParams.get("v"); if(v)return v; const e=p.indexOf("embed"); if(e>=0&&p[e+1])return p[e+1]; const s=p.indexOf("shorts"); if(s>=0&&p[s+1])return p[s+1]; const l=p.indexOf("live"); if(l>=0&&p[l+1])return p[l+1];}}catch{} return url};
-    const pretty=(s)=>{const m=Math.floor(s/60),sec=s%60;return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`};
-    const DEFAULT_SESSIONS={A:[{id:"pompes-mur",name:"Pompes au mur",videoUrl:""},{id:"pike-lean",name:"Pike lean (appui épaules)",videoUrl:""},{id:"pompes-hr",name:"Pompes hand-release (à genoux si besoin)",videoUrl:""},{id:"planche",name:"Planche",videoUrl:""},{id:"wall-slides",name:"Wall slides (glissés scapulaires)",videoUrl:""}],
-                            B:[{id:"ytwi",name:"Y-T-W-I au sol",videoUrl:""},{id:"angels",name:"Reverse snow angels",videoUrl:""},{id:"good-morning",name:"Good morning sans charge",videoUrl:""},{id:"side-plank",name:"Gainage latéral (side plank)",videoUrl:""},{id:"squats",name:"Squats au poids du corps",videoUrl:""}]};
-    const DEFAULT_SETTINGS={mode:"reps",repsTarget:12,setsTarget:3,restBetweenSets:60,workSec:30,restSec:30,rounds:5};
-    const autoMode=(id)=>{id=String(id||"").toLowerCase();return ["planche","plank","pike-lean","side-plank","hollow","superman","hold"].some(k=>id.includes(k))?"timer":"reps"};
-
-    const Card=({children,className})=>(<div className={cls("rounded-2xl shadow-sm border border-gray-200 bg-white p-4",className)}>{children}</div>);
-    const Title=({icon,title,subtitle})=>(
-      <div className="mb-3">
-        <h2 className="text-xl font-semibold flex items-center gap-2"><span className="text-2xl">{icon}</span>{title}</h2>
-        {subtitle?<p className="text-sm text-gray-500 mt-1">{subtitle}</p>:null}
-      </div>
-    );
-
-    const YT = ({url,enabled,onEnable})=>{
-      const id=ytId(url);
-      if(!id) return <div className="aspect-video w-full rounded-xl bg-gray-100 grid place-items-center text-gray-500 text-sm">Colle un lien YouTube (watch, youtu.be, shorts ou live).</div>;
-      if(!enabled) return (
-        <div className="aspect-video w-full rounded-xl bg-gray-100 p-4 flex flex-col items-center justify-center text-center">
-          <div className="text-sm text-gray-700 mb-2">Lecture intégrée désactivée.</div>
-          <div className="text-xs text-gray-500 mb-3">Charge la vidéo ici, ou ouvre-la dans YouTube.</div>
-          <div className="flex gap-2">
-            <button className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm" onClick={onEnable}>Charger ici</button>
-            <a className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm" href={`https://www.youtube.com/watch?v=${id}`} target="_blank" rel="noreferrer">Ouvrir ↗</a>
-          </div>
-        </div>
-      );
-      return <iframe className="aspect-video w-full rounded-xl" src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`} title="YouTube" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen sandbox="allow-same-origin allow-scripts allow-popups allow-forms"/>;
+    // ===== Utils =====
+    const storage = {
+      get(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch { return fallback; }
+      },
+      set(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+      },
+    };
+    const classNames = (...xs) => xs.filter(Boolean).join(" ");
+    const prettyTime = (s) => {
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
     };
 
-    function App(){
-      const [sessions,setSessions]=useState(()=>storage.get("calis.sessions",DEFAULT_SESSIONS));
-      const [selected,setSelected]=useState("A");
-      const [activeId,setActiveId]=useState(sessions.A[0]?.id||"");
-      const [settings,setSettings]=useState(()=>storage.get("calis.settings",DEFAULT_SETTINGS));
-      const [ytEnabled,setYtEnabled]=useState(()=>storage.get("calis.ytEnabled",false));
+    function extractYouTubeId(url) {
+      if (!url) return "";
+      try {
+        const u = new URL(url);
+        const host = u.hostname.replace(/^www\./, "");
+        const parts = u.pathname.split("/").filter(Boolean);
+        if (host.includes("youtu.be")) return parts[0] || ""; // youtu.be/ID
+        if (host.includes("youtube.com") || host.includes("m.youtube.com") || host.includes("music.youtube.com")) {
+          const v = u.searchParams.get("v");
+          if (v) return v; // watch?v=
+          const e = parts.indexOf("embed"); if (e >= 0 && parts[e+1]) return parts[e+1];
+          const s = parts.indexOf("shorts"); if (s >= 0 && parts[s+1]) return parts[s+1];
+          const l = parts.indexOf("live"); if (l >= 0 && parts[l+1]) return parts[l+1];
+        }
+      } catch {}
+      return url; // accept raw ID
+    }
 
-      const [currentSet,setCurrentSet]=useState(1);
-      const [repCount,setRepCount]=useState(0);
-      const [resting,setResting]=useState(false);
-      const [restLeft,setRestLeft]=useState(settings.restBetweenSets);
+    function useBeep() {
+      const ctxRef = useRef(null);
+      useEffect(() => () => ctxRef.current?.close?.(), []);
+      return (freq = 880, durationMs = 120) => {
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          if (!ctxRef.current) ctxRef.current = new AudioCtx();
+          const ctx = ctxRef.current;
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = "sine";
+          o.frequency.value = freq;
+          o.connect(g); g.connect(ctx.destination);
+          const now = ctx.currentTime;
+          g.gain.setValueAtTime(0.001, now);
+          g.gain.exponentialRampToValueAtTime(0.4, now + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, now + durationMs/1000);
+          o.start(now); o.stop(now + durationMs/1000 + 0.01);
+        } catch {}
+      };
+    }
 
-      const [phase,setPhase]=useState("ready");
-      const [isRunning,setIsRunning]=useState(false);
-      const [secondsLeft,setSecondsLeft]=useState(settings.workSec);
-      const [round,setRound]=useState(1);
+    // ===== Calendrier — bande hebdo =====
+    const MONTHS_FR = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+    const WDAYS_FR = ["L","M","M","J","V","S","D"];
+    const formatDateKey = (d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const startOfWeek = (date)=>{const d=new Date(date);const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);return d;};
+    const addWeeks = (date,delta)=>{const d=new Date(date);d.setDate(d.getDate()+delta*7);return d;};
+    const getWeekDays = (viewDate)=>{const start=startOfWeek(viewDate);return Array.from({length:7},(_,i)=>{const dt=new Date(start);dt.setDate(start.getDate()+i);return dt;});};
 
-      const [log,setLog]=useState(()=>storage.get("calis.log",{}));
-      const todayKey=useMemo(()=>fKey(new Date()),[]);
-      const [viewDate,setViewDate]=useState(new Date());
+    // ===== Données par défaut =====
+    const DEFAULT_SESSIONS = {
+      A: [
+        { id: "pompes-mur", name: "Pompes au mur", videoUrl: "" },
+        { id: "pike-lean", name: "Pike lean (appui épaules)", videoUrl: "" },
+        { id: "pompes-hr", name: "Pompes hand-release (à genoux si besoin)", videoUrl: "" },
+        { id: "planche", name: "Planche", videoUrl: "" },
+        { id: "wall-slides", name: "Wall slides (glissés scapulaires)", videoUrl: "" },
+      ],
+      B: [
+        { id: "ytwi", name: "Y-T-W-I au sol", videoUrl: "" },
+        { id: "angels", name: "Reverse snow angels", videoUrl: "" },
+        { id: "good-morning", name: "Good morning sans charge", videoUrl: "" },
+        { id: "side-plank", name: "Gainage latéral (side plank)", videoUrl: "" },
+        { id: "squats", name: "Squats au poids du corps", videoUrl: "" },
+      ],
+    };
 
-      const list=sessions[selected]||[];
-      const active=list.find(x=>x.id===activeId)||list[0]||null;
+    const DEFAULT_SETTINGS = {
+      mode: "reps",
+      repsTarget: 12,
+      setsTarget: 3,
+      restBetweenSets: 60,
+      workSec: 30,
+      restSec: 30,
+      rounds: 5,
+    };
 
-      useEffect(()=>storage.set("calis.sessions",sessions),[sessions]);
-      useEffect(()=>storage.set("calis.settings",settings),[settings]);
-      useEffect(()=>storage.set("calis.ytEnabled",ytEnabled),[ytEnabled]);
-      useEffect(()=>storage.set("calis.log",log),[log]);
+    // Mode auto : timer pour les holds, reps sinon
+    function getDefaultModeForExercise(exId){
+      const id = String(exId || '').toLowerCase();
+      const timerIds = ['planche','plank','side-plank','pike-lean','hollow','superman','hold'];
+      return timerIds.some(k=>id.includes(k)) ? 'timer' : 'reps';
+    }
 
-      useEffect(()=>{ const l=sessions[selected]; if(!l.find(x=>x.id===activeId)){ setActiveId(l[0]?.id||""); } },[selected]);
-      useEffect(()=>{ const m=autoMode(active?.id||activeId); setSettings(s=>s.mode===m?s:{...s,mode:m}); },[activeId,active?.id]);
+    // ===== UI =====
+    function SectionTitle({ icon, title, subtitle }) {
+      return (
+        <div className="mb-3">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <span className="text-2xl">{icon}</span>
+            {title}
+          </h2>
+          {subtitle ? (<p className="text-sm text-gray-500 mt-1">{subtitle}</p>) : null}
+        </div>
+      );
+    }
 
-      function isDone(id){ const day=log[todayKey]||{}; const sData=day.sessions?.[selected]||{}; return !!(sData.exDone&&sData.exDone[id]); }
-      function setDone(id,done){
-        setLog(prev=>{ const copy={...prev}; const day={...(copy[todayKey]||{})}; day.sessions={...(day.sessions||{})};
-          const sData={...(day.sessions[selected]||{})}; sData.exDone={...(sData.exDone||{})}; if(done) sData.exDone[id]=true; else delete sData.exDone[id];
-          day.sessions[selected]=sData; const all=list.length>0 && list.every(ex=>!!sData.exDone?.[ex.id]); day.completedSessions={...(day.completedSessions||{})}; day.completedSessions[selected]=all;
-          day.completed=Object.values(day.completedSessions).some(Boolean); copy[todayKey]=day; return copy;});
+    function Card({ children, className }) {
+      return (
+        <div className={classNames("rounded-2xl shadow-sm border border-gray-200 bg-white p-4", className)}>
+          {children}
+        </div>
+      );
+    }
+
+    // Champ numérique robuste (édition libre, validation au blur/Enter)
+    function NumberField({ label, value, onChange, min = 0, step = 1, suffix }) {
+      const [draft, setDraft] = useState(String(value));
+      useEffect(() => setDraft(String(value)), [value]);
+
+      function commit(v) {
+        let num = parseInt(v, 10);
+        if (Number.isNaN(num)) num = min;
+        if (num < min) num = min;
+        onChange(num);
+        setDraft(String(num));
       }
 
-      // rendu
+      return (
+        <label className="flex items-center gap-2 text-sm">
+          <span className="w-40 text-gray-600">{label}</span>
+          <input
+            type="number"
+            className="w-28 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+            value={draft}
+            min={min}
+            step={step}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => commit(draft)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { commit(draft); e.currentTarget.blur(); } }}
+          />
+          {suffix && <span className="text-gray-500">{suffix}</span>}
+        </label>
+      );
+    }
+
+    function ProgressBar({ value, max }) {
+      const percent = Math.min(100, Math.round((value / max) * 100));
+      return (
+        <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full bg-gray-900 transition-all" style={{ width: `${percent}%` }} />
+        </div>
+      );
+    }
+
+    function YouTubeFrame({ url, enabled, onEnable }) {
+      const id = extractYouTubeId(url);
+      if (!id) {
+        const isClip = typeof url === "string" && url.includes("/clip/");
+        return (
+          <div className="aspect-video w-full rounded-xl bg-gray-100 grid place-items-center text-gray-500 text-sm">
+            {isClip
+              ? "Ce type de lien YouTube (Clip) ne peut pas être intégré ici. Utilise le bouton « Ouvrir ↗ »."
+              : "Colle un lien YouTube (watch, youtu.be, shorts ou live) pour afficher la vidéo"}
+          </div>
+        );
+      }
+      if (!enabled) {
+        return (
+          <div className="aspect-video w-full rounded-xl bg-gray-100 p-4 flex flex-col items-center justify-center text-center">
+            <div className="text-sm text-gray-700 mb-2">Lecture intégrée désactivée.</div>
+            <div className="text-xs text-gray-500 mb-3">Charge la vidéo ici, ou ouvre-la dans YouTube.</div>
+            <div className="flex gap-2">
+              <button className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm" onClick={onEnable}>Charger ici</button>
+              <a className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm" href={`https://www.youtube.com/watch?v=${id}`} target="_blank" rel="noreferrer">Ouvrir ↗</a>
+            </div>
+          </div>
+        );
+      }
+      const src = `https://www.youtube-nocookie.com/embed/${id}?rel=0`;
+      return (
+        <iframe
+          key={id}
+          className="aspect-video w-full rounded-xl"
+          src={src}
+          title="YouTube"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+        />
+      );
+    }
+
+    const EXERCISE_HELP = {
+      "pike-lean": {
+        what: "Renforce les épaules (deltoïdes), le dentelé antérieur et le gainage des omoplates. Étape vers les pompes pike et la planche.",
+        setup: [
+          "Mains au sol largeur épaules, doigts écartés",
+          "Fesses hautes (V inversé), genoux légèrement fléchis si besoin",
+          "Bras tendus, nuque neutre (regarde entre les mains)"
+        ],
+        move: [
+          "Pousse le sol et avance les épaules au-delà des mains",
+          "Tiens 10–30 s en respirant, omoplates écartées",
+          "Option dynamique : bascule avant 2 s / arrière 2 s"
+        ],
+        cues: ["Pousse le sol", "Épaules au-dessus des mains", "Fesses hautes", "Respire calme"],
+        mistakes: ["Plier les coudes", "Cambrer le bas du dos", "Hausser les épaules"],
+        easier: ["Mains sur table/mur", "Moins d’avancée", "Tenir 10–15 s"],
+        harder: ["Pieds sur chaise", "Avancer davantage", "Pseudo planche lean"],
+        dosage: "3×20–30 s ou 3×6–10 bascules (repos 60–90 s)"
+      }
+    };
+
+    function App() {
+      // Etat principal
+      const [sessions, setSessions] = useState(() => storage.get("calis.sessions", DEFAULT_SESSIONS));
+      const [selectedSession, setSelectedSession] = useState("A");
+      const [activeExerciseId, setActiveExerciseId] = useState(sessions.A[0]?.id || "");
+
+      const [settings, setSettings] = useState(() => storage.get("calis.settings", DEFAULT_SETTINGS));
+      const [ytEnabled, setYtEnabled] = useState(() => storage.get("calis.ytEnabled", false));
+
+      // Reps
+      const [currentSet, setCurrentSet] = useState(1);
+      const [repCount, setRepCount] = useState(0);
+      const [resting, setResting] = useState(false);
+      const [restLeft, setRestLeft] = useState(settings.restBetweenSets);
+
+      // Timer
+      const [phase, setPhase] = useState("ready"); // ready | work | rest | done
+      const [isRunning, setIsRunning] = useState(false);
+      const [secondsLeft, setSecondsLeft] = useState(settings.workSec);
+      const [round, setRound] = useState(1);
+
+      // Log & calendrier
+      const [log, setLog] = useState(() => storage.get("calis.log", {}));
+      const todayKey = useMemo(() => formatDateKey(new Date()), []);
+      const [viewDate, setViewDate] = useState(new Date());
+
+      const beep = useBeep();
+
+      const activeExercise = useMemo(() => {
+        const list = sessions[selectedSession] || [];
+        return list.find((x) => x.id === activeExerciseId) || list[0] || null;
+      }, [sessions, selectedSession, activeExerciseId]);
+
+      const sessionNames = { A: "Séance A (Push/Core)", B: "Séance B (Dos/Posture/Core)" };
+      const help = EXERCISE_HELP[activeExercise?.id];
+
+      // Persist
+      useEffect(() => storage.set("calis.sessions", sessions), [sessions]);
+      useEffect(() => storage.set("calis.settings", settings), [settings]);
+      useEffect(() => storage.set("calis.ytEnabled", ytEnabled), [ytEnabled]);
+      useEffect(() => storage.set("calis.log", log), [log]);
+
+      // Maintenir un exercice actif quand on change de séance
+      useEffect(() => {
+        const list = sessions[selectedSession];
+        if (!list.find((x) => x.id === activeExerciseId)) {
+          setActiveExerciseId(list[0]?.id || "");
+        }
+      }, [selectedSession]);
+
+      // Mode auto selon l'exercice
+      useEffect(() => {
+        const m = getDefaultModeForExercise(activeExercise?.id || activeExerciseId);
+        setSettings((s) => (s.mode === m ? s : { ...s, mode: m }));
+      }, [activeExerciseId, activeExercise?.id]);
+
+      // Repos entre séries (compte à rebours)
+      useEffect(() => {
+        if (!resting) return;
+        if (restLeft <= 0) {
+          setResting(false);
+          setRestLeft(settings.restBetweenSets);
+          setRepCount(0);
+          beep(1200, 150);
+          return;
+        }
+        const t = setTimeout(() => setRestLeft((s) => s - 1), 1000);
+        return () => clearTimeout(t);
+      }, [resting, restLeft, settings.restBetweenSets]);
+
+      // Moteur du chrono
+      useEffect(() => {
+        if (!isRunning) return;
+        if (secondsLeft <= 0) {
+          if (phase === "work") {
+            beep(1200, 150);
+            if (settings.restSec > 0) {
+              setPhase("rest");
+              setSecondsLeft(settings.restSec);
+            } else {
+              if (round >= settings.rounds) {
+                setPhase("done"); setIsRunning(false); beep(600, 200);
+              } else { setRound((r) => r + 1); setSecondsLeft(settings.workSec); }
+            }
+          } else if (phase === "rest") {
+            beep(900, 120);
+            if (round >= settings.rounds) {
+              setPhase("done"); setIsRunning(false); beep(600, 200);
+            } else { setRound((r) => r + 1); setPhase("work"); setSecondsLeft(settings.workSec); }
+          }
+          return;
+        }
+        const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+        return () => clearTimeout(t);
+      }, [isRunning, secondsLeft, phase, round, settings.workSec, settings.restSec, settings.rounds]);
+
+      // Sync timers avec les réglages (quand non lancé)
+      useEffect(() => {
+        if (!isRunning && (phase === "ready" || phase === "done")) setSecondsLeft(settings.workSec);
+      }, [settings.workSec]);
+      useEffect(() => {
+        if (!isRunning && phase === "rest") setSecondsLeft(settings.restSec);
+      }, [settings.restSec]);
+      // Sync repos entre séries si on n'est pas déjà en repos
+      useEffect(() => { if (!resting) setRestLeft(settings.restBetweenSets); }, [settings.restBetweenSets, resting]);
+
+      // Checklist (log)
+      function isExDone(exId) {
+        const day = log[todayKey] || {};
+        const sData = day.sessions?.[selectedSession] || {};
+        return !!(sData.exDone && sData.exDone[exId]);
+      }
+      function setExDone(exId, done) {
+        setLog((prev) => {
+          const copy = { ...prev };
+          const day = { ...(copy[todayKey] || {}) };
+          day.sessions = { ...(day.sessions || {}) };
+          const sData = { ...(day.sessions[selectedSession] || {}) };
+          sData.exDone = { ...(sData.exDone || {}) };
+          if (done) sData.exDone[exId] = true; else delete sData.exDone[exId];
+          day.sessions[selectedSession] = sData;
+          const list = sessions[selectedSession] || [];
+          const allDone = list.length > 0 && list.every((ex) => !!sData.exDone?.[ex.id]);
+          day.completedSessions = { ...(day.completedSessions || {}) };
+          day.completedSessions[selectedSession] = allDone;
+          day.completed = Object.values(day.completedSessions).some(Boolean);
+          copy[todayKey] = day;
+          return copy;
+        });
+      }
+
+      function resetReps() { setCurrentSet(1); setRepCount(0); setRestLeft(settings.restBetweenSets); setResting(false); }
+      function resetTimer() { setPhase("ready"); setIsRunning(false); setSecondsLeft(settings.workSec); setRound(1); }
+      function startTimer() { if (phase === "ready" || phase === "done") { setPhase("work"); setSecondsLeft(settings.workSec); setRound(1); } setIsRunning(true); }
+
+      const exList = sessions[selectedSession] || [];
+      const doneCount = exList.filter((ex) => isExDone(ex.id)).length;
+      const todayData = log[todayKey] || {};
+      const todaySessionDone = !!(todayData.completedSessions && todayData.completedSessions[selectedSession]);
+
       return (
         <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white text-gray-900">
           <div className="max-w-5xl mx-auto p-4 sm:p-6">
             <header className="mb-4 sm:mb-6">
               <h1 className="text-2xl sm:text-3xl font-bold">Coach Callisthenie — Sans Matériel</h1>
-              <p className="text-gray-600 mt-1">Répéts ou chrono + vidéo YouTube intégrée. Sauvegarde locale.</p>
+              <p className="text-gray-600 mt-1">Suis ton programme : répéts ou chrono + vidéo YouTube. Sauvegarde locale.</p>
             </header>
 
+            {/* Bande calendrier (semaine) */}
             <Card>
-              <Title icon="📅" title="Semaine en cours" subtitle="La journée se valide quand la checklist est complète"/>
+              <SectionTitle icon="📅" title="Semaine en cours" subtitle="La journée se valide quand la checklist est complète" />
               <div className="flex items-center justify-between mb-2">
-                <button className="px-2 py-1 rounded-lg border border-gray-300 text-sm" onClick={()=>setViewDate(addW(viewDate,-1))}>←</button>
-                <div className="text-sm font-medium">Semaine du {wDays(viewDate)[0].getDate()} {MONTHS_FR[wDays(viewDate)[0].getMonth()]}</div>
-                <button className="px-2 py-1 rounded-lg border border-gray-300 text-sm" onClick={()=>setViewDate(addW(viewDate,1))}>→</button>
+                <button className="px-2 py-1 rounded-lg border border-gray-300 text-sm" onClick={() => setViewDate(addWeeks(viewDate, -1))}>←</button>
+                <div className="text-sm font-medium">Semaine du {getWeekDays(viewDate)[0].getDate()} {MONTHS_FR[getWeekDays(viewDate)[0].getMonth()]}</div>
+                <button className="px-2 py-1 rounded-lg border border-gray-300 text-sm" onClick={() => setViewDate(addWeeks(viewDate, 1))}>→</button>
               </div>
               <div className="flex gap-2 overflow-x-auto py-1">
-                {wDays(viewDate).map((d,idx)=>{
-                  const key=fKey(d); const day=log[key]; const done=!!(day&&day.completed); const tags=(day&&day.completedSessions)||{}; const today=key===todayKey;
+                {getWeekDays(viewDate).map((d, idx) => {
+                  const key = formatDateKey(d);
+                  const dayData = log[key];
+                  const isDone = !!(dayData && dayData.completed);
+                  const sessionsDone = (dayData && dayData.completedSessions) || {};
+                  const isToday = key === todayKey;
                   return (
-                    <div key={key} className={cls("min-w-[56px] flex-shrink-0 p-2 rounded-xl border text-center","bg-white border-gray-200",done&&"bg-green-50 border-green-200",today&&"ring-2 ring-gray-900")}>
+                    <div key={key} className={classNames("min-w-[56px] flex-shrink-0 p-2 rounded-xl border text-center",
+                        "bg-white border-gray-200",
+                        isDone && "bg-green-50 border-green-200",
+                        isToday && "ring-2 ring-gray-900")}>
                       <div className="text-xs font-medium">{WDAYS_FR[idx]}</div>
                       <div className="text-sm">{d.getDate()}</div>
                       <div className="mt-1 flex justify-center gap-1 text-[10px]">
-                        {tags.A && <span className="px-1 rounded bg-green-100 text-green-700">A</span>}
-                        {tags.B && <span className="px-1 rounded bg-green-100 text-green-700">B</span>}
-                        {done && <span className="text-green-600">✔</span>}
+                        {sessionsDone.A && <span className="px-1 rounded bg-green-100 text-green-700">A</span>}
+                        {sessionsDone.B && <span className="px-1 rounded bg-green-100 text-green-700">B</span>}
+                        {isDone && <span className="text-green-600">✔</span>}
                       </div>
                     </div>
                   );
@@ -176,96 +463,243 @@
               </div>
             </Card>
 
+            {/* Contenu principal */}
             <div className="grid lg:grid-cols-3 gap-4 mt-4">
+              {/* Colonne gauche : Exercices + checklist */}
               <Card className="lg:col-span-1">
-                <Title icon="📋" title="Exercices" subtitle="Choisis un exercice dans la séance"/>
+                <SectionTitle icon="📋" title="Exercices" subtitle="Choisis un exercice dans la séance" />
+
+                {/* Sélection A/B déplacée ici */}
                 <div className="mb-3">
                   <div className="flex items-center gap-2">
-                    {["A","B"].map(s=>(
-                      <button key={s} onClick={()=>setSelected(s)} className={cls("px-3 py-2 rounded-xl border text-sm", selected===s?"bg-gray-900 text-white border-gray-900":"bg-white text-gray-800 border-gray-200")}>{s}</button>
+                    {["A", "B"].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSelectedSession(s)}
+                        className={classNames(
+                          "px-3 py-2 rounded-xl border text-sm",
+                          selectedSession === s ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-800 border-gray-200"
+                        )}
+                      >
+                        {s}
+                      </button>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{selected==="A"?"Séance A (Push/Core)":"Séance B (Dos/Posture/Core)"}</p>
+                  <p className="text-xs text-gray-500 mt-1">{sessionNames[selectedSession]}</p>
                 </div>
 
+                {/* Liste des exercices */}
                 <ul className="space-y-2">
-                  {list.map(ex=>(
+                  {(sessions[selectedSession] || []).map((ex) => (
                     <li key={ex.id}>
-                      <button onClick={()=>setActiveId(ex.id)} className={cls("w-full text-left p-3 rounded-xl border", activeId===ex.id?"bg-gray-900 text-white border-gray-900":"bg-white hover:bg-gray-50 border-gray-200")}>
+                      <button
+                        onClick={() => setActiveExerciseId(ex.id)}
+                        className={classNames(
+                          "w-full text-left p-3 rounded-xl border",
+                          activeExerciseId === ex.id
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white hover:bg-gray-50 border-gray-200"
+                        )}
+                      >
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm sm:text-base">{ex.name}</span>
-                          {activeId===ex.id && <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">Actif</span>}
+                          {activeExerciseId === ex.id && <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">Actif</span>}
                         </div>
                       </button>
                     </li>
                   ))}
                 </ul>
 
+                {/* Checklist du jour */}
                 <div className="mt-4">
-                  <Title icon="✅" title="Checklist du jour" subtitle={`Séance ${selected} — coche chaque exercice`}/>
+                  <SectionTitle icon="✅" title="Checklist du jour" subtitle={"Séance " + selectedSession + " — coche chaque exercice"} />
                   <ul className="space-y-2">
-                    {list.map(ex=>(
+                    {(sessions[selectedSession] || []).map((ex) => (
                       <label key={"ck-"+ex.id} className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={isDone(ex.id)} onChange={e=>setDone(ex.id,e.target.checked)}/>
+                        <input type="checkbox" checked={isExDone(ex.id)} onChange={(e) => setExDone(ex.id, e.target.checked)} />
                         <span>{ex.name}</span>
                       </label>
                     ))}
                   </ul>
+                  <p className="text-xs text-gray-600 mt-2">{todaySessionDone ? "✅ Journée validée pour cette séance" : (doneCount + "/" + (sessions[selectedSession]||[]).length + " exercices cochés")}</p>
                 </div>
               </Card>
 
+              {/* Colonne droite : vidéo + paramètres */}
               <div className="lg:col-span-2 space-y-4">
                 <Card>
-                  <Title icon="🎥" title={active?.name||"Exercice"} subtitle="Vidéo + paramètres"/>
+                  <SectionTitle icon="🎥" title={activeExercise?.name || "Exercice"} subtitle="Vidéo + paramètres de l'exercice" />
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <YT url={active?.videoUrl||""} enabled={ytEnabled} onEnable={()=>setYtEnabled(true)}/>
+                      <YouTubeFrame url={activeExercise?.videoUrl || ""} enabled={ytEnabled} onEnable={() => setYtEnabled(true)} />
                       <div className="mt-2 flex items-center gap-2">
-                        <input className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Colle l'URL YouTube" value={active?.videoUrl||""}
-                          onChange={e=>{const val=e.target.value; setSessions(prev=>{const copy={...prev}; copy[selected]=copy[selected].map(x=>x.id===active.id?{...x,videoUrl:val}:x); return copy;});}}/>
-                        <button className={cls("px-3 py-2 rounded-xl border text-sm", ytEnabled?"border-gray-300 hover:bg-gray-50":"border-gray-900 bg-gray-900 text-white")}
-                                onClick={()=>setYtEnabled(v=>!v)}>{ytEnabled?"Intégration : ON":"Intégration : OFF"}</button>
-                        {active?.videoUrl ? <a className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm" href={active.videoUrl} target="_blank" rel="noreferrer">Ouvrir ↗</a> : null}
+                        <input
+                          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                          placeholder="Colle ici l'URL YouTube de l'exercice"
+                          value={activeExercise?.videoUrl || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSessions((prev) => {
+                              const copy = { ...prev };
+                              copy[selectedSession] = copy[selectedSession].map((x) =>
+                                x.id === activeExercise.id ? { ...x, videoUrl: val } : x
+                              );
+                              return copy;
+                            });
+                          }}
+                        />
+                        <button
+                          className={classNames("px-3 py-2 rounded-xl border text-sm", ytEnabled ? "border-gray-300 hover:bg-gray-50" : "border-gray-900 bg-gray-900 text-white")}
+                          onClick={() => setYtEnabled((v) => !v)}
+                          title={ytEnabled ? "Désactiver le lecteur intégré" : "Activer le lecteur intégré"}
+                        >
+                          {ytEnabled ? "Intégration : ON" : "Intégration : OFF"}
+                        </button>
+                        {activeExercise?.videoUrl ? (
+                          <a className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm" href={activeExercise.videoUrl} target="_blank" rel="noreferrer">Ouvrir ↗</a>
+                        ) : null}
                       </div>
                     </div>
 
+                    {/* Réglages selon le mode auto */}
                     <div className="space-y-3">
-                      {settings.mode==="reps" ? (
+                      {settings.mode === "reps" ? (
                         <div>
-                          <Title icon="🔢" title="Répétitions"/>
-                          <p className="text-sm text-gray-600">Règle tes cibles à droite si besoin.</p>
+                          <SectionTitle icon="🔢" title="Répétitions" />
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">Série {currentSet}/{settings.setsTarget}</span>
+                            <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">{repCount} / {settings.repsTarget} reps</span>
+                            {resting && <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">Repos {prettyTime(restLeft)}</span>}
+                          </div>
+                          <ProgressBar value={currentSet - 1 + (repCount / Math.max(1, settings.repsTarget))} max={settings.setsTarget} />
+
+                          <div className="mt-4 space-y-2">
+                            <NumberField label="Répétitions / série" value={settings.repsTarget} min={1} onChange={(v) => setSettings((s) => ({ ...s, repsTarget: v }))} />
+                            <NumberField label="Nombre de séries" value={settings.setsTarget} min={1} onChange={(v) => setSettings((s) => ({ ...s, setsTarget: v }))} />
+                            <NumberField label="Repos entre séries" value={settings.restBetweenSets} min={0} onChange={(v) => setSettings((s) => ({ ...s, restBetweenSets: v }))} suffix="sec" />
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            <button className="px-4 py-2 rounded-xl border border-gray-300 text-sm" onClick={() => setRepCount((r) => Math.max(0, r - 1))}>− 1</button>
+                            <button className="px-4 py-2 rounded-xl border border-gray-300 text-sm" onClick={() => setRepCount((r) => Math.min(settings.repsTarget, r + 1))}>+ 1</button>
+                            <button
+                              className="px-4 py-2 rounded-xl border border-gray-900 bg-gray-900 text-white text-sm"
+                              onClick={() => {
+                                if (resting) return;
+                                if (repCount >= settings.repsTarget) {
+                                  if (currentSet < settings.setsTarget) {
+                                    setCurrentSet(s => s + 1);
+                                    setResting(true);
+                                    setRestLeft(settings.restBetweenSets);
+                                  }
+                                } else {
+                                  setRepCount(settings.repsTarget);
+                                }
+                              }}
+                            >
+                              {repCount >= settings.repsTarget ? "Valider la série" : "Atteindre l'objectif"}
+                            </button>
+                            <button className="px-3 py-2 rounded-xl border border-gray-300 text-sm" onClick={resetReps}>Réinitialiser</button>
+                          </div>
                         </div>
                       ) : (
                         <div>
-                          <Title icon="⏱️" title="Chrono"/>
-                          <p className="text-sm text-gray-600">Démarre/pauses depuis les boutons ci-dessous.</p>
+                          <SectionTitle icon="⏱️" title="Chrono" />
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">Tour {round}/{settings.rounds}</span>
+                            <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">Phase {phase === "ready" ? "prêt" : phase}</span>
+                            <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">{prettyTime(secondsLeft)}</span>
+                          </div>
+                          <ProgressBar
+                            value={(round - 1) * (settings.workSec + settings.restSec) + (phase === "work" ? settings.workSec - secondsLeft : phase === "rest" ? settings.restSec - secondsLeft : 0)}
+                            max={settings.rounds * (settings.workSec + (settings.restSec || 0))}
+                          />
+                          <div className="text-5xl font-bold mt-4 tabular-nums">{prettyTime(secondsLeft)}</div>
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {!isRunning ? (
+                              <button className="px-4 py-2 rounded-xl border border-gray-900 bg-gray-900 text-white text-sm" onClick={startTimer}>Démarrer</button>
+                            ) : (
+                              <button className="px-4 py-2 rounded-xl border border-gray-300 text-sm" onClick={() => setIsRunning(false)}>Pause</button>
+                            )}
+                            <button className="px-3 py-2 rounded-xl border border-gray-300 text-sm" onClick={() => { if (phase === "work") setSecondsLeft(0); }}>Sauter travail</button>
+                            <button className="px-3 py-2 rounded-xl border border-gray-300 text-sm" onClick={() => { if (phase === "rest") setSecondsLeft(0); }}>Sauter repos</button>
+                            <button className="px-3 py-2 rounded-xl border border-gray-300 text-sm" onClick={resetTimer}>Réinitialiser</button>
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
                 </Card>
 
+                {/* Aide exercice (si dispo) */}
+                {help && (
+                  <Card>
+                    <SectionTitle icon="💡" title={`Aide rapide : ${activeExercise?.name}`} />
+                    <p className="text-sm text-gray-700 mb-3">{help.what}</p>
+                    <div className="grid sm:grid-cols-2 gap-4 text-sm text-gray-800">
+                      <div>
+                        <h3 className="font-medium mb-1">Mise en place</h3>
+                        <ul className="list-disc pl-5 space-y-1">{help.setup.map((x,i)=>(<li key={`s-${i}`}>{x}</li>))}</ul>
+                      </div>
+                      <div>
+                        <h3 className="font-medium mb-1">Mouvement</h3>
+                        <ul className="list-disc pl-5 space-y-1">{help.move.map((x,i)=>(<li key={`m-${i}`}>{x}</li>))}</ul>
+                      </div>
+                    </div>
+                    <div className="grid sm:grid-cols-3 gap-4 mt-3 text-sm">
+                      <div>
+                        <h3 className="font-medium mb-1">Cues</h3>
+                        <ul className="list-disc pl-5 space-y-1">{help.cues.map((x,i)=>(<li key={`c-${i}`}>{x}</li>))}</ul>
+                      </div>
+                      <div>
+                        <h3 className="font-medium mb-1">Erreurs</h3>
+                        <ul className="list-disc pl-5 space-y-1">{help.mistakes.map((x,i)=>(<li key={`e-${i}`}>{x}</li>))}</ul>
+                      </div>
+                      <div>
+                        <h3 className="font-medium mb-1">Régressions/Progressions</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <ul className="list-disc pl-5 space-y-1">{help.easier.map((x,i)=>(<li key={`r-${i}`}>{x}</li>))}</ul>
+                          <ul className="list-disc pl-5 space-y-1">{help.harder.map((x,i)=>(<li key={`p-${i}`}>{x}</li>))}</ul>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-3"><span className="font-medium">Dosage :</span> {help.dosage}</p>
+                  </Card>
+                )}
+
                 <Card>
-                  <Title icon="🧠" title="Conseils rapides de forme"/>
+                  <SectionTitle icon="🧠" title="Conseils rapides de forme" />
                   <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
                     <li>Épaules basses, nuque neutre, cage thoracique rentrée.</li>
-                    <li>Contrôle la descente (2–3 s). Respire : souffle en poussant, inspire en revenant.</li>
+                    <li>Contrôle la descente (2–3 s). Souffle en poussant/tenant, inspire en revenant.</li>
                     <li>Douleur aiguë = stop. Réduis l’amplitude ou remplace l’exercice.</li>
                   </ul>
                 </Card>
 
                 <Card>
-                  <Title icon="🧾" title="Options"/>
+                  <SectionTitle icon="🧾" title="Options" />
                   <div className="flex flex-wrap gap-2">
-                    <button className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm"
-                      onClick={()=>{ if(confirm("Réinitialiser ?")){ localStorage.clear(); location.reload(); } }}>Réinitialiser</button>
-                    <button className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm" onclick="window.print()">Imprimer / PDF</button>
+                    <button
+                      className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm"
+                      onClick={() => {
+                        if (confirm("Réinitialiser les paramètres et données ?")) {
+                          localStorage.clear(); location.reload();
+                        }
+                      }}
+                    >
+                      Réinitialiser
+                    </button>
+                    <button className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 text-sm" onClick={() => window.print()}>
+                      Imprimer / PDF
+                    </button>
                   </div>
                 </Card>
               </div>
             </div>
 
-            <footer className="mt-8 text-center text-xs text-gray-500">Données stockées en local (localStorage).</footer>
+            <footer className="mt-8 text-center text-xs text-gray-500">
+              Données stockées en local (localStorage). Zéro matériel. Bon entraînement 💪
+            </footer>
           </div>
         </div>
       );
